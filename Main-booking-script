@@ -1,0 +1,171 @@
+#from selenium import webdriver as wd
+from selenium.webdriver.support.ui import Select
+import chromedriver_binary
+import time
+from datetime import date
+import datetime
+import random
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from bs4 import BeautifulSoup as BSHTML
+import urllib
+import requests
+
+from selenium import webdriver
+options = webdriver.ChromeOptions() 
+options.add_argument('--disable-blink-features=AutomationControlled')
+
+#Path till chromedriver_binary\chromedriver.exe för att undvika botskydd eventuellt kan behöva ändra i hex editor cdc_$ oklart om det används i dagsläget.
+wd = webdriver.Chrome(options=options, executable_path=r'C:\Users\oscar\anaconda3\envs\bot_timeedite\Lib\site-packages\chromedriver_binary\chromedriver.exe')
+
+#Email för bokningsbekräftelse.
+Email = ''
+#Datum format 2022-06-13 År-månad-dag.
+Start_Date = ''
+End_Date = ''
+
+wd.implicitly_wait(5)
+
+#In på bokapass.se byt linken beroende på vilket län som eftersöks.
+wd.get("https://bokapass.nemoq.se/Booking/Booking/Next/stockholm")
+
+#Om man har två särmar flyttar till skärm 2
+#wd.set_window_position(-2000, 0)
+wd.maximize_window()
+time.sleep(5)
+
+#Går in för legitemering med mobilt bankid.
+wd.find_element_by_xpath('//*[@id="Main"]/div[2]/div[1]/div/form/div[2]/input').click()
+time.sleep(1)
+wd.find_element_by_xpath('//*[@id="a_wpki2"]').click()
+
+#Väntar tills bankid är bekräftat.
+while True:
+    time.sleep(5)
+    done = wd.find_elements_by_xpath('//*[@id="AcceptInformationStorage"]')
+    if len(done) > 0:
+        print('bankid klar')
+        wd.find_element_by_xpath('//*[@id="AcceptInformationStorage"]').click()
+        break
+time.sleep(1)
+
+Next = wd.find_element_by_xpath('//*[@id="Main"]/form/div[2]/input').click()
+time.sleep(0.3)
+
+Sverige =wd.find_element_by_xpath('//*[@id="Main"]/form/div[1]/div/div/label[1]').click()
+time.sleep(0.3)
+
+Next = wd.find_element_by_xpath('//*[@id="Main"]/form/div[2]/input').click()
+
+#Om även Id krävs.
+BokningGaller = wd.find_element_by_xpath('//*[@id="Customers_0__Services_0__IsSelected"]').click()
+time.sleep(5)
+BokningGaller2 = wd.find_element_by_xpath('//*[@id="Customers_0__Services_1__IsSelected"]').click()
+time.sleep(5)
+
+Next = wd.find_element_by_xpath('//*[@id="Main"]/form/div[2]/input').click()
+time.sleep(0.3)
+
+#Väljer område om hela länet söks kommentera bort.
+ddelement= Select(wd.find_element_by_xpath('//*[@id="SectionId"]'))
+ddelement.select_by_index(9)
+
+#Loopar tills tid släpps samt löser captcha vid behov.
+import urllib.request
+from anticaptchaofficial.imagecaptcha import *
+
+time.sleep(0.5)
+while True:
+    time.sleep(1)
+    while True:
+        Ledig_tid = wd.find_element_by_xpath('//*[@id="Main"]/form[1]/div/div[6]/div/input[2]')
+        Ledig_tid.click()
+
+        elem1 = wd.find_elements_by_xpath(f'//*[contains(@aria-label, "{str(Start_Date[:-3])}")]')
+        if len(elem1) > 0:
+            print('Tid hittad i startmånad')
+            wd.find_element_by_xpath(f"//*[contains(@aria-label, '{str(Start_Date[:-3])}')]").click()
+            break
+        
+        #leta efter captcha
+        elem4 = wd.find_elements_by_xpath('//*[text()[contains(.,"captcha")]]')
+        if len(elem4) > 1:
+            try:
+                #Captcha hittad, löser captcha med anticaptchaofficial.
+                wd.switch_to.default_content()
+                wd.switch_to.frame('mtcaptcha-iframe-1')
+                img = wd.find_element_by_xpath('//div[@id="mtcap-image-1"]/img')
+                src = img.get_attribute('src')
+                print("download successful")
+                urllib.request.urlretrieve(src, "captcha.jpeg")
+                wd.switch_to.default_content()
+                solver = imagecaptcha()
+                solver.set_verbose(1)
+                #Set personlig api key från anticaptcha.com.
+                solver.set_key("####API KEY####")
+
+                captcha_text = solver.solve_and_return_solution("captcha.jpeg")
+                if captcha_text != 0:
+                    print ("captcha text " + captcha_text)
+                else:
+                    print ("task finished with error " + solver.error_code)
+                #Skicka Captcha
+                wd.switch_to.default_content()
+                wd.switch_to.frame('mtcaptcha-iframe-1')
+                cap = wd.find_element_by_xpath('//*[@id="mtcap-inputtext-1"]')
+                type(cap)
+                cap.send_keys(str(captcha_text))
+                wd.switch_to.default_content()
+            except:
+                print('captcha misslyckades')
+                Ledig_tid = wd.find_element_by_xpath('//*[@id="Main"]/form[1]/div/div[6]/div/input[2]')
+                Ledig_tid.click()
+
+        random_wait_time=random.randrange(10,15)
+        time.sleep(random_wait_time)
+        
+    try:
+        Clicked_Time = wd.find_element_by_xpath(f"//*[contains(@aria-label, '{Start_Date[:-3]}')]").get_attribute("aria-label")
+        Clicked_Time = str(Clicked_Time)
+        Clicked_Time = Clicked_Time[:-9]
+        print(Start_Date)
+        print(Clicked_Time)
+        print(End_Date)
+    except:
+        print('Fel år')
+    if Start_Date <= Clicked_Time <= End_Date:
+        #Hittar första lediga tiden klickar.
+        wd.find_element_by_xpath('//*[@id="booking-next"]').click()
+        time.sleep(0.313)
+        elem4 = wd.find_elements_by_xpath('//*[text()[contains(.,"Tiden du valde är inte tillgänglig")]]')
+        if len(elem4) == 0:
+            print('Tid ledig')
+            break
+time.sleep(2)
+Next= wd.find_element_by_xpath('//*[@id="Main"]/form/div/input').click()
+
+#Kontaktuppgifter.
+Epost = wd.find_element_by_xpath('//*[@id="EmailAddress"]')
+type(Epost)
+Epost.send_keys(str(Email))
+
+time.sleep(2)
+
+RrEpost = wd.find_element_by_xpath('//*[@id="ConfirmEmailAddress"]')
+type(RrEpost)
+RrEpost.send_keys(str(Email))
+time.sleep(1)
+
+comfirm = wd.find_element_by_xpath('//*[@id="SelectedContacts_0__IsSelected"]').click()
+time.sleep(1)
+
+remind = wd.find_element_by_xpath('//*[@id="SelectedContacts_2__IsSelected"]').click()
+time.sleep(1)
+
+#Bekräftar bokelse två gånger pga ibland går det inte igenom vid första.
+Next1 = wd.find_element_by_xpath('//*[@id="Main"]/form/div[2]/input').click()
+time.sleep(3)
+Confirm_Book = wd.find_element_by_xpath('//*[@id="Main"]/form/div[1]/input').click()
+time.sleep(3)
+Confirm_Book = wd.find_element_by_xpath('//*[@id="Main"]/form/div[1]/input').click()
