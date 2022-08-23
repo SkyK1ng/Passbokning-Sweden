@@ -1,5 +1,5 @@
 # Passbokning-Sweden 
-Selenium script that can carry out full boking. Date range selection possible. 
+Python selenium script that can carry out full boking. Date range selection possible. 
 
   
 The script works by pressing "Nästa lediga tid" untill a free date within specified date range is found and then it fulfills the booking. Because of anti bot measures on the website, it uses Anti captcha solver to bypass this problem. The bot can run continually until it books a time without getting booted off the website. 
