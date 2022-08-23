@@ -15,7 +15,7 @@ What later conspired was about 4 mounths of booking time for people for free. As
 
  
 
-#Developments 
+#Developments
 2022-04-28 
 
 Bot protection added, website searched for ‘’navigator.webdriver’’. Solved in about 4 hrs 
